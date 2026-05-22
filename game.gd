@@ -582,10 +582,18 @@ func _on_restart_pressed() -> void:
 
 # ----------------- SETTINGS & FULLSCREEN DYNAMIC SCALE -----------------
 
+var last_click_time: int = 0
+const DOUBLE_CLICK_DELAY_MS: int = 300
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
-			open_settings()
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			var current_time = Time.get_ticks_msec()
+			if current_time - last_click_time < DOUBLE_CLICK_DELAY_MS:
+				open_settings()
+				last_click_time = 0 # Prevent triple-click triggers
+			else:
+				last_click_time = current_time
 
 func open_settings() -> void:
 	settings_panel.visible = true
