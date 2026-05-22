@@ -35,14 +35,16 @@ var is_game_over: bool = false
 # Settings UI bindings
 @onready var settings_panel: Panel = $SettingsPanel
 @onready var gui_toggle: CheckButton = $SettingsPanel/VBox/GuiRow/GuiToggle
+@onready var infinite_toggle: CheckButton = $SettingsPanel/VBox/InfiniteRow/InfiniteToggle
 @onready var scale_25: Button = $SettingsPanel/VBox/ScaleRow/Scale25
 @onready var scale_50: Button = $SettingsPanel/VBox/ScaleRow/Scale50
 @onready var scale_75: Button = $SettingsPanel/VBox/ScaleRow/Scale75
 @onready var scale_100: Button = $SettingsPanel/VBox/ScaleRow/Scale100
 @onready var settings_close_button: Button = $SettingsPanel/VBox/CloseButton
 
-# Jewels Box scale settings
+# Jewels Box scale & mode settings
 var current_scale_percent: float = 1.0
+var is_infinite_mode: bool = false
 
 func _ready() -> void:
 	# Setup random seed
@@ -54,6 +56,7 @@ func _ready() -> void:
 	
 	# Connect settings inputs
 	gui_toggle.toggled.connect(_on_gui_toggle)
+	infinite_toggle.toggled.connect(_on_infinite_toggle)
 	scale_25.pressed.connect(func(): _on_scale_pressed(0.25))
 	scale_50.pressed.connect(func(): _on_scale_pressed(0.50))
 	scale_75.pressed.connect(func(): _on_scale_pressed(0.75))
@@ -81,7 +84,10 @@ func start_new_game() -> void:
 	info_overlay.visible = false
 	combo_label.text = ""
 	score_label.text = "Score: 0"
-	moves_label.text = "Moves: 30"
+	if is_infinite_mode:
+		moves_label.text = "Moves: \u221E"
+	else:
+		moves_label.text = "Moves: 30"
 	
 	# Clear old children from grid container
 	for child in grid_container.get_children():
@@ -206,8 +212,11 @@ func is_adjacent(a: Control, b: Control) -> bool:
 
 func swap_jewels(a: Control, b: Control) -> void:
 	is_board_locked = true
-	moves_remaining -= 1
-	moves_label.text = "Moves: " + str(moves_remaining)
+	if not is_infinite_mode:
+		moves_remaining -= 1
+		moves_label.text = "Moves: " + str(moves_remaining)
+	else:
+		moves_label.text = "Moves: \u221E"
 	
 	# Grid Coordinates cache
 	var ax = a.grid_x
@@ -262,7 +271,7 @@ func swap_jewels(a: Control, b: Control) -> void:
 		await back_tween.finished
 		
 		# Release locking
-		if moves_remaining <= 0:
+		if not is_infinite_mode and moves_remaining <= 0:
 			show_game_over()
 		else:
 			is_board_locked = false
@@ -379,7 +388,7 @@ func process_matches_and_cascade() -> void:
 		await shuffle_board_with_guarantee(true)
 		
 	# Game Over checklist
-	if moves_remaining <= 0:
+	if not is_infinite_mode and moves_remaining <= 0:
 		show_game_over()
 	else:
 		is_board_locked = false
@@ -596,6 +605,8 @@ func _input(event: InputEvent) -> void:
 				last_click_time = current_time
 
 func open_settings() -> void:
+	infinite_toggle.button_pressed = is_infinite_mode
+	gui_toggle.button_pressed = not $HUD.visible
 	settings_panel.visible = true
 	is_board_locked = true
 
@@ -608,6 +619,19 @@ func _on_gui_toggle(toggled_on: bool) -> void:
 	# If toggled_on is true, we hide GUI
 	$HUD.visible = not toggled_on
 	update_board_scale()
+
+func _on_infinite_toggle(toggled_on: bool) -> void:
+	is_infinite_mode = toggled_on
+	if is_infinite_mode:
+		moves_label.text = "Moves: \u221E"
+		if is_game_over:
+			is_game_over = false
+			is_board_locked = false
+			game_over_panel.visible = false
+	else:
+		if moves_remaining <= 0:
+			moves_remaining = 30
+		moves_label.text = "Moves: " + str(moves_remaining)
 
 func _on_scale_pressed(percent: float) -> void:
 	current_scale_percent = percent
