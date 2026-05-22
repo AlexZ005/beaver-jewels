@@ -32,6 +32,18 @@ var is_game_over: bool = false
 @onready var restart_button: Button = $GameOverPanel/VBox/RestartButton
 @onready var hud_restart_button: Button = $HUD/Margin/VBox/StatsRow/RestartButton
 
+# Settings UI bindings
+@onready var settings_panel: Panel = $SettingsPanel
+@onready var gui_toggle: CheckButton = $SettingsPanel/VBox/GuiRow/GuiToggle
+@onready var scale_25: Button = $SettingsPanel/VBox/ScaleRow/Scale25
+@onready var scale_50: Button = $SettingsPanel/VBox/ScaleRow/Scale50
+@onready var scale_75: Button = $SettingsPanel/VBox/ScaleRow/Scale75
+@onready var scale_100: Button = $SettingsPanel/VBox/ScaleRow/Scale100
+@onready var settings_close_button: Button = $SettingsPanel/VBox/CloseButton
+
+# Jewels Box scale settings
+var current_scale_percent: float = 1.0
+
 func _ready() -> void:
 	# Setup random seed
 	randomize()
@@ -40,8 +52,22 @@ func _ready() -> void:
 	restart_button.pressed.connect(_on_restart_pressed)
 	hud_restart_button.pressed.connect(_on_restart_pressed)
 	
+	# Connect settings inputs
+	gui_toggle.toggled.connect(_on_gui_toggle)
+	scale_25.pressed.connect(func(): _on_scale_pressed(0.25))
+	scale_50.pressed.connect(func(): _on_scale_pressed(0.50))
+	scale_75.pressed.connect(func(): _on_scale_pressed(0.75))
+	scale_100.pressed.connect(func(): _on_scale_pressed(1.00))
+	settings_close_button.pressed.connect(close_settings)
+	
+	# Connect screen resize
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	
 	# Initialize game
 	start_new_game()
+	
+	# Initial scale calculation
+	update_board_scale()
 
 func start_new_game() -> void:
 	# Reset states
@@ -553,3 +579,56 @@ func show_game_over() -> void:
 
 func _on_restart_pressed() -> void:
 	start_new_game()
+
+# ----------------- SETTINGS & FULLSCREEN DYNAMIC SCALE -----------------
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.double_click:
+			open_settings()
+
+func open_settings() -> void:
+	settings_panel.visible = true
+	is_board_locked = true
+
+func close_settings() -> void:
+	settings_panel.visible = false
+	if not is_game_over:
+		is_board_locked = false
+
+func _on_gui_toggle(toggled_on: bool) -> void:
+	# If toggled_on is true, we hide GUI
+	$HUD.visible = not toggled_on
+	update_board_scale()
+
+func _on_scale_pressed(percent: float) -> void:
+	current_scale_percent = percent
+	update_board_scale()
+
+func _on_viewport_size_changed() -> void:
+	update_board_scale()
+
+func update_board_scale() -> void:
+	if not is_inside_tree():
+		return
+	var viewport_size = get_viewport().get_visible_rect().size
+	var base_board_size = 548.0
+	
+	# Calculate available viewport space for jewels box
+	var available_height = viewport_size.y
+	if $HUD.visible:
+		available_height -= 130.0 # Reserve space for HUD top row
+	else:
+		available_height -= 40.0  # Basic padding margin
+		
+	var available_width = viewport_size.x - 40.0
+	
+	# Calculate fit-fullscreen ratio
+	var fit_scale = min(available_width / base_board_size, available_height / base_board_size)
+	
+	# Combine with settings percent
+	var final_scale = fit_scale * current_scale_percent
+	
+	# Set scale centered at pivot offset
+	$Board.scale = Vector2(final_scale, final_scale)
+	$Board.pivot_offset = Vector2(base_board_size / 2.0, base_board_size / 2.0)
