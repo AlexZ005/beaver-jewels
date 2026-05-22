@@ -117,6 +117,7 @@ func start_new_game() -> void:
 			# Signals
 			jewel.jewel_clicked.connect(_on_jewel_clicked)
 			jewel.jewel_dragged.connect(_on_jewel_dragged)
+			jewel.jewel_double_clicked.connect(_on_jewel_double_clicked)
 			
 			grid[x][y] = jewel
 			
@@ -435,6 +436,7 @@ func apply_gravity_and_refill() -> void:
 			
 			jewel.jewel_clicked.connect(_on_jewel_clicked)
 			jewel.jewel_dragged.connect(_on_jewel_dragged)
+			jewel.jewel_double_clicked.connect(_on_jewel_double_clicked)
 			
 			# Spawn pop scale and fall bounce
 			jewel.scale = Vector2.ZERO
@@ -565,6 +567,7 @@ func shuffle_board_with_guarantee(animate_shuffle: bool = true) -> void:
 				jewel.position = get_cell_position(x, y)
 				jewel.jewel_clicked.connect(_on_jewel_clicked)
 				jewel.jewel_dragged.connect(_on_jewel_dragged)
+				jewel.jewel_double_clicked.connect(_on_jewel_double_clicked)
 				grid[x][y] = jewel
 				
 				idx += 1
@@ -591,18 +594,8 @@ func _on_restart_pressed() -> void:
 
 # ----------------- SETTINGS & FULLSCREEN DYNAMIC SCALE -----------------
 
-var last_click_time: int = 0
-const DOUBLE_CLICK_DELAY_MS: int = 300
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			var current_time = Time.get_ticks_msec()
-			if current_time - last_click_time < DOUBLE_CLICK_DELAY_MS:
-				open_settings()
-				last_click_time = 0 # Prevent triple-click triggers
-			else:
-				last_click_time = current_time
+func _on_jewel_double_clicked(_jewel: Control) -> void:
+	open_settings()
 
 func open_settings() -> void:
 	infinite_toggle.button_pressed = is_infinite_mode

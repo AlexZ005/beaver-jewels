@@ -3,6 +3,7 @@ extends Control
 
 signal jewel_clicked(jewel)
 signal jewel_dragged(jewel, direction)
+signal jewel_double_clicked(jewel)
 
 enum JewelType { RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE }
 
@@ -34,6 +35,10 @@ var drag_reported: bool = false
 # Pulse/animation timers
 var glow_time: float = 0.0
 
+# Double click variables
+var last_click_time: int = 0
+const DOUBLE_CLICK_DELAY_MS: int = 350
+
 func _ready() -> void:
 	# Ensure the Control node catches mouse events
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -59,7 +64,13 @@ func _gui_input(event: InputEvent) -> void:
 				if is_mouse_down:
 					is_mouse_down = false
 					if not drag_reported:
-						jewel_clicked.emit(self)
+						var current_time = Time.get_ticks_msec()
+						if current_time - last_click_time < DOUBLE_CLICK_DELAY_MS:
+							jewel_double_clicked.emit(self)
+							last_click_time = 0
+						else:
+							last_click_time = current_time
+							jewel_clicked.emit(self)
 	
 	elif event is InputEventMouseMotion:
 		if is_mouse_down and not drag_reported:
