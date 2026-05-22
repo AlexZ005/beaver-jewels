@@ -41,6 +41,7 @@ var is_game_over: bool = false
 @onready var scale_75: Button = $SettingsPanel/VBox/ScaleRow/Scale75
 @onready var scale_100: Button = $SettingsPanel/VBox/ScaleRow/Scale100
 @onready var settings_close_button: Button = $SettingsPanel/VBox/CloseButton
+@onready var fullscreen_toggle: CheckButton = $SettingsPanel/VBox/FullscreenRow/FullscreenToggle
 
 # Jewels Box scale & mode settings
 var current_scale_percent: float = 1.0
@@ -57,6 +58,7 @@ func _ready() -> void:
 	# Connect settings inputs
 	gui_toggle.toggled.connect(_on_gui_toggle)
 	infinite_toggle.toggled.connect(_on_infinite_toggle)
+	fullscreen_toggle.toggled.connect(_on_fullscreen_toggle)
 	scale_25.pressed.connect(func(): _on_scale_pressed(0.25))
 	scale_50.pressed.connect(func(): _on_scale_pressed(0.50))
 	scale_75.pressed.connect(func(): _on_scale_pressed(0.75))
@@ -600,6 +602,7 @@ func _on_jewel_double_clicked(_jewel: Control) -> void:
 func open_settings() -> void:
 	infinite_toggle.button_pressed = is_infinite_mode
 	gui_toggle.button_pressed = not $HUD.visible
+	fullscreen_toggle.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
 	settings_panel.visible = true
 	is_board_locked = true
 
@@ -625,6 +628,12 @@ func _on_infinite_toggle(toggled_on: bool) -> void:
 		if moves_remaining <= 0:
 			moves_remaining = 30
 		moves_label.text = "Moves: " + str(moves_remaining)
+
+func _on_fullscreen_toggle(toggled_on: bool) -> void:
+	if toggled_on:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 
 func _on_scale_pressed(percent: float) -> void:
 	current_scale_percent = percent
@@ -657,3 +666,9 @@ func update_board_scale() -> void:
 	# Set scale centered at pivot offset
 	$Board.scale = Vector2(final_scale, final_scale)
 	$Board.pivot_offset = Vector2(base_board_size / 2.0, base_board_size / 2.0)
+	
+	# Settings panel scaling for responsive mobile viewports
+	var settings_scale = min(viewport_size.x / 470.0, viewport_size.y / 470.0)
+	settings_scale = clamp(settings_scale, 0.6, 1.4)
+	settings_panel.scale = Vector2(settings_scale, settings_scale)
+	settings_panel.pivot_offset = Vector2(225.0, 210.0)
